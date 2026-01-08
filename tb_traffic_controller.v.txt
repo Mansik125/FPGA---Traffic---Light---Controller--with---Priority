@@ -1,0 +1,34 @@
+module tb_traffic_controller;
+
+reg clk, rst;
+reg emergency_ns, emergency_ew;
+wire [2:0] ns_light, ew_light;
+
+traffic_controller DUT (
+    .clk(clk),
+    .rst(rst),
+    .emergency_ns(emergency_ns),
+    .emergency_ew(emergency_ew),
+    .ns_light(ns_light),
+    .ew_light(ew_light)
+);
+
+// Clock generation
+always #5 clk = ~clk;
+
+initial begin
+    clk = 0; rst = 1;
+    emergency_ns = 0; emergency_ew = 0;
+
+    #20 rst = 0;
+
+    #200 emergency_ns = 1;   // Emergency North-South
+    #100 emergency_ns = 0;
+
+    #200 emergency_ew = 1;   // Emergency East-West
+    #100 emergency_ew = 0;
+
+    #300 $stop;
+end
+
+endmodule

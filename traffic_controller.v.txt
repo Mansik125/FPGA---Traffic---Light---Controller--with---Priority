@@ -1,0 +1,59 @@
+module traffic_controller(
+    input clk,
+    input rst,
+    input emergency_ns,
+    input emergency_ew,
+    output reg [2:0] ns_light,   // {R,Y,G}
+    output reg [2:0] ew_light
+);
+
+wire slow_clk;
+clk_divider div1(clk, rst, slow_clk);
+
+// State encoding
+localparam NS_GREEN  = 2'b00;
+localparam NS_YELLOW = 2'b01;
+localparam EW_GREEN  = 2'b10;
+localparam EW_YELLOW = 2'b11;
+
+reg [1:0] state, next_state;
+
+// State register
+always @(posedge slow_clk or posedge rst) begin
+    if (rst)
+        state <= NS_GREEN;
+    else
+        state <= next_state;
+end
+
+// Next state logic with PRIORITY override
+always @(*) begin
+    if (emergency_ns)
+        next_state = NS_GREEN;
+    else if (emergency_ew)
+        next_state = EW_GREEN;
+    else begin
+        case (state)
+            NS_GREEN:  next_state = NS_YELLOW;
+            NS_YELLOW: next_state = EW_GREEN;
+            EW_GREEN:  next_state = EW_YELLOW;
+            EW_YELLOW: next_state = NS_GREEN;
+            default:   next_state = NS_GREEN;
+        endcase
+    end
+end
+
+// Output logic
+always @(*) begin
+    ns_light = 3'b100; // RED
+    ew_light = 3'b100;
+
+    case (state)
+        NS_GREEN:  begin ns_light = 3'b001; ew_light = 3'b100; end
+        NS_YELLOW: begin ns_light = 3'b010; ew_light = 3'b100; end
+        EW_GREEN:  begin ns_light = 3'b100; ew_light = 3'b001; end
+        EW_YELLOW: begin ns_light = 3'b100; ew_light = 3'b010; end
+    endcase
+end
+
+endmodule
